@@ -8,3 +8,21 @@ services:
       - 3000:3000
     volumes:
       - .:/home/node/app
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  db:
+    image: bitnami/postgresql
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRESQL_USERNAME=prisma
+      - POSTGRESQL_PASSWORD=prisma
+      - POSTGRESQL_DATABASE=micro_videos
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

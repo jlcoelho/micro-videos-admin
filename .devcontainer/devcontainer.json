@@ -30,7 +30,8 @@
 			"extensions": [
 				"Orta.vscode-jest",
 				"firsttris.vscode-jest-runner",
-				"dbaeumer.vscode-eslint"
+				"dbaeumer.vscode-eslint",
+				"Prisma.prisma"
 			]
 		}
 	}
