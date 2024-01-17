@@ -6,9 +6,12 @@ import { Category } from '../../../../domain/category.entity';
 import { CategoryPrismaRepository } from '../category-prisma.repository';
 import { Uuid } from '../../../../../shared/domain/value-objects/uuid.vo';
 import { NotFoundEntityError } from '../../../../../shared/domain/errors/not-found-entity.error';
+import { CategoryModelMapper } from '../category-model-mapper';
+import { CategorySearchParams, CategorySearchResult } from '../../../../domain/category.repository';
 
 const execSync = util.promisify(exec);
 
+jest.setTimeout(50000);
 
 const prismaBinary = './node_modules/.bin/prisma';
 
@@ -17,11 +20,15 @@ describe("CategoryPrismaRepository Integration Test", () => {
   let repository: CategoryPrismaRepository;
   const { schemaId, url } = generateDatabaseURL();
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     prisma = new PrismaClient({
       datasources: { db: { url } }
     });
 
+
+  });
+
+  beforeEach(async () => {
     await execSync(`${prismaBinary} db push`, {
       env: {
         ...process.env,
@@ -30,7 +37,13 @@ describe("CategoryPrismaRepository Integration Test", () => {
     });
     repository = new CategoryPrismaRepository(prisma);
   });
+  
   afterEach(async () => {
+    await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaId}" CASCADE;`);
+    await prisma.$disconnect();
+  });
+
+  afterAll(async () => {
     await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaId}" CASCADE;`);
     await prisma.$disconnect();
   });
@@ -94,242 +107,244 @@ describe("CategoryPrismaRepository Integration Test", () => {
     await expect(repository.findById(entity.category_id)).resolves.toBeNull();
   });
 
-  // describe('search method tests', () => {
-  //   it('should only apply paginate when other params are null', async () => {
-  //     const created_at = new Date();
-  //     const categories = Category.fake()
-  //       .theCategories(16)
-  //       .withName('Movie')
-  //       .withDescription(null)
-  //       .withCreatedAt(created_at)
-  //       .build();
-  //     await repository.bulkInsert(categories);
-  //     const spyToEntity = jest.spyOn(CategoryModelMapper, 'toEntity');
+  describe('search method tests', () => {
+    it('should only apply paginate when other params are null', async () => {
+      const created_at = new Date();
+      const categories = Category.fake()
+        .theCategories(16)
+        .withName('Movie')
+        .withDescription(null)
+        .withCreatedAt(created_at)
+        .build();
+      await repository.bulkInsert(categories);
+      const spyToEntity = jest.spyOn(CategoryModelMapper, 'toEntity');
 
-  //     const searchOutput = await repository.search(new CategorySearchParams());
-  //     expect(searchOutput).toBeInstanceOf(CategorySearchResult);
-  //     expect(spyToEntity).toHaveBeenCalledTimes(15);
-  //     expect(searchOutput.toJSON()).toMatchObject({
-  //       total: 16,
-  //       current_page: 1,
-  //       last_page: 2,
-  //       per_page: 15,
-  //     });
-  //     searchOutput.items.forEach((item) => {
-  //       expect(item).toBeInstanceOf(Category);
-  //       expect(item.category_id).toBeDefined();
-  //     });
-  //     const items = searchOutput.items.map((item) => item.toJSON());
-  //     expect(items).toMatchObject(
-  //       new Array(15).fill({
-  //         name: 'Movie',
-  //         description: null,
-  //         is_active: true,
-  //         created_at: created_at,
-  //       }),
-  //     );
-  //   });
+      const searchOutput = await repository.search(new CategorySearchParams());
+      expect(searchOutput).toBeInstanceOf(CategorySearchResult);
+      expect(spyToEntity).toHaveBeenCalledTimes(15);
+      expect(searchOutput.toJSON()).toMatchObject({
+        total: 16,
+        current_page: 1,
+        last_page: 2,
+        per_page: 15,
+      });
+      searchOutput.items.forEach((item) => {
+        expect(item).toBeInstanceOf(Category);
+        expect(item.category_id).toBeDefined();
+      });
+      const items = searchOutput.items.map((item) => item.toJSON());
+      expect(items).toMatchObject(
+        new Array(15).fill({
+          name: 'Movie',
+          description: null,
+          is_active: true,
+          created_at: created_at,
+        }),
+      );
+    });
 
-  //   it('should order by created_at DESC when search params are null', async () => {
-  //     const created_at = new Date();
-  //     const categories = Category.fake()
-  //       .theCategories(16)
-  //       .withName((index) => `Movie ${index}`)
-  //       .withDescription(null)
-  //       .withCreatedAt((index) => new Date(created_at.getTime() + index))
-  //       .build();
-  //     const searchOutput = await repository.search(new CategorySearchParams());
-  //     const items = searchOutput.items;
-  //     [...items].reverse().forEach((item, index) => {
-  //       expect(`Movie ${index}`).toBe(`${categories[index + 1].name}`);
-  //     });
-  //   });
+    it('should order by created_at DESC when search params are null', async () => {
+      const created_at = new Date();
+      const categories = Category.fake()
+        .theCategories(16)
+        .withName((index) => `Movie ${index}`)
+        .withDescription(null)
+        .withCreatedAt((index) => new Date(created_at.getTime() + index))
+        .build();
+      const searchOutput = await repository.search(new CategorySearchParams());
+      const items = searchOutput.items;
+      [...items].reverse().forEach((item, index) => {
+        expect(`Movie ${index}`).toBe(`${categories[index + 1].name}`);
+      });
+    });
 
-  //   it('should apply paginate and filter', async () => {
-  //     const categories = [
-  //       Category.fake()
-  //         .aCategory()
-  //         .withName('test')
-  //         .withCreatedAt(new Date(new Date().getTime() + 5000))
-  //         .build(),
-  //       Category.fake()
-  //         .aCategory()
-  //         .withName('a')
-  //         .withCreatedAt(new Date(new Date().getTime() + 4000))
-  //         .build(),
-  //       Category.fake()
-  //         .aCategory()
-  //         .withName('TEST')
-  //         .withCreatedAt(new Date(new Date().getTime() + 3000))
-  //         .build(),
-  //       Category.fake()
-  //         .aCategory()
-  //         .withName('TeSt')
-  //         .withCreatedAt(new Date(new Date().getTime() + 1000))
-  //         .build(),
-  //     ];
+    it('should apply paginate and filter', async () => {
+      const categories = [
+        Category.fake()
+          .aCategory()
+          .withName('test')
+          .withCreatedAt(new Date(new Date().getTime() + 5000))
+          .build(),
+        Category.fake()
+          .aCategory()
+          .withName('a')
+          .withCreatedAt(new Date(new Date().getTime() + 4000))
+          .build(),
+        Category.fake()
+          .aCategory()
+          .withName('TEST')
+          .withCreatedAt(new Date(new Date().getTime() + 3000))
+          .build(),
+        Category.fake()
+          .aCategory()
+          .withName('TeSt')
+          .withCreatedAt(new Date(new Date().getTime() + 1000))
+          .build(),
+      ];
 
-  //     await repository.bulkInsert(categories);
+      await repository.bulkInsert(categories);
+      
 
-  //     let searchOutput = await repository.search(
-  //       new CategorySearchParams({
-  //         page: 1,
-  //         per_page: 2,
-  //         filter: 'TEST',
-  //       }),
-  //     );
-  //     expect(searchOutput.toJSON(true)).toMatchObject(
-  //       new CategorySearchResult({
-  //         items: [categories[0], categories[2]],
-  //         total: 3,
-  //         current_page: 1,
-  //         per_page: 2,
-  //       }).toJSON(true),
-  //     );
+      let searchOutput = await repository.search(
+        new CategorySearchParams({
+          page: 1,
+          per_page: 2,
+          filter: 'TEST',
+        }),
+      );
 
-  //     searchOutput = await repository.search(
-  //       new CategorySearchParams({
-  //         page: 2,
-  //         per_page: 2,
-  //         filter: 'TEST',
-  //       }),
-  //     );
-  //     expect(searchOutput.toJSON(true)).toMatchObject(
-  //       new CategorySearchResult({
-  //         items: [categories[3]],
-  //         total: 3,
-  //         current_page: 2,
-  //         per_page: 2,
-  //       }).toJSON(true),
-  //     );
-  //   });
+      expect(searchOutput.toJSON(true)).toMatchObject(
+        new CategorySearchResult({
+          items: [categories[0], categories[2]],
+          total: 3,
+          current_page: 1,
+          per_page: 2,
+        }).toJSON(true),
+      );
 
-  //   it('should apply paginate and sort', async () => {
-  //     expect(repository.sortableFields).toStrictEqual(['name', 'created_at']);
+      searchOutput = await repository.search(
+        new CategorySearchParams({
+          page: 2,
+          per_page: 2,
+          filter: 'TEST',
+        }),
+      );
+      expect(searchOutput.toJSON(true)).toMatchObject(
+        new CategorySearchResult({
+          items: [categories[3]],
+          total: 3,
+          current_page: 2,
+          per_page: 2,
+        }).toJSON(true),
+      );
+    });
 
-  //     const categories = [
-  //       Category.fake().aCategory().withName('b').build(),
-  //       Category.fake().aCategory().withName('a').build(),
-  //       Category.fake().aCategory().withName('d').build(),
-  //       Category.fake().aCategory().withName('e').build(),
-  //       Category.fake().aCategory().withName('c').build(),
-  //     ];
-  //     await repository.bulkInsert(categories);
+    it('should apply paginate and sort', async () => {
+      expect(repository.sortableFields).toStrictEqual(['name', 'created_at']);
 
-  //     const arrange = [
-  //       {
-  //         params: new CategorySearchParams({
-  //           page: 1,
-  //           per_page: 2,
-  //           sort: 'name',
-  //         }),
-  //         result: new CategorySearchResult({
-  //           items: [categories[1], categories[0]],
-  //           total: 5,
-  //           current_page: 1,
-  //           per_page: 2,
-  //         }),
-  //       },
-  //       {
-  //         params: new CategorySearchParams({
-  //           page: 2,
-  //           per_page: 2,
-  //           sort: 'name',
-  //         }),
-  //         result: new CategorySearchResult({
-  //           items: [categories[4], categories[2]],
-  //           total: 5,
-  //           current_page: 2,
-  //           per_page: 2,
-  //         }),
-  //       },
-  //       {
-  //         params: new CategorySearchParams({
-  //           page: 1,
-  //           per_page: 2,
-  //           sort: 'name',
-  //           sort_dir: 'desc',
-  //         }),
-  //         result: new CategorySearchResult({
-  //           items: [categories[3], categories[2]],
-  //           total: 5,
-  //           current_page: 1,
-  //           per_page: 2,
-  //         }),
-  //       },
-  //       {
-  //         params: new CategorySearchParams({
-  //           page: 2,
-  //           per_page: 2,
-  //           sort: 'name',
-  //           sort_dir: 'desc',
-  //         }),
-  //         result: new CategorySearchResult({
-  //           items: [categories[4], categories[0]],
-  //           total: 5,
-  //           current_page: 2,
-  //           per_page: 2,
-  //         }),
-  //       },
-  //     ];
+      const categories = [
+        Category.fake().aCategory().withName('b').build(),
+        Category.fake().aCategory().withName('a').build(),
+        Category.fake().aCategory().withName('d').build(),
+        Category.fake().aCategory().withName('e').build(),
+        Category.fake().aCategory().withName('c').build(),
+      ];
+      await repository.bulkInsert(categories);
 
-  //     for (const i of arrange) {
-  //       const result = await repository.search(i.params);
-  //       expect(result.toJSON(true)).toMatchObject(i.result.toJSON(true));
-  //     }
-  //   });
+      const arrange = [
+        {
+          params: new CategorySearchParams({
+            page: 1,
+            per_page: 2,
+            sort: 'name',
+          }),
+          result: new CategorySearchResult({
+            items: [categories[1], categories[0]],
+            total: 5,
+            current_page: 1,
+            per_page: 2,
+          }),
+        },
+        {
+          params: new CategorySearchParams({
+            page: 2,
+            per_page: 2,
+            sort: 'name',
+          }),
+          result: new CategorySearchResult({
+            items: [categories[4], categories[2]],
+            total: 5,
+            current_page: 2,
+            per_page: 2,
+          }),
+        },
+        {
+          params: new CategorySearchParams({
+            page: 1,
+            per_page: 2,
+            sort: 'name',
+            sort_dir: 'desc',
+          }),
+          result: new CategorySearchResult({
+            items: [categories[3], categories[2]],
+            total: 5,
+            current_page: 1,
+            per_page: 2,
+          }),
+        },
+        {
+          params: new CategorySearchParams({
+            page: 2,
+            per_page: 2,
+            sort: 'name',
+            sort_dir: 'desc',
+          }),
+          result: new CategorySearchResult({
+            items: [categories[4], categories[0]],
+            total: 5,
+            current_page: 2,
+            per_page: 2,
+          }),
+        },
+      ];
 
-  //   describe('should search using filter, sort and paginate', () => {
-  //     const categories = [
-  //       Category.fake().aCategory().withName('test').build(),
-  //       Category.fake().aCategory().withName('a').build(),
-  //       Category.fake().aCategory().withName('TEST').build(),
-  //       Category.fake().aCategory().withName('e').build(),
-  //       Category.fake().aCategory().withName('TeSt').build(),
-  //     ];
+      for (const i of arrange) {
+        const result = await repository.search(i.params);
+        expect(result.toJSON(true)).toMatchObject(i.result.toJSON(true));
+      }
+    });
 
-  //     const arrange = [
-  //       {
-  //         search_params: new CategorySearchParams({
-  //           page: 1,
-  //           per_page: 2,
-  //           sort: 'name',
-  //           filter: 'TEST',
-  //         }),
-  //         search_result: new CategorySearchResult({
-  //           items: [categories[2], categories[4]],
-  //           total: 3,
-  //           current_page: 1,
-  //           per_page: 2,
-  //         }),
-  //       },
-  //       {
-  //         search_params: new CategorySearchParams({
-  //           page: 2,
-  //           per_page: 2,
-  //           sort: 'name',
-  //           filter: 'TEST',
-  //         }),
-  //         search_result: new CategorySearchResult({
-  //           items: [categories[0]],
-  //           total: 3,
-  //           current_page: 2,
-  //           per_page: 2,
-  //         }),
-  //       },
-  //     ];
+    describe('should search using filter, sort and paginate', () => {
+      const categories = [
+        Category.fake().aCategory().withName('test').build(),
+        Category.fake().aCategory().withName('a').build(),
+        Category.fake().aCategory().withName('TEST').build(),
+        Category.fake().aCategory().withName('e').build(),
+        Category.fake().aCategory().withName('TeSt').build(),
+      ];
 
-  //     beforeEach(async () => {
-  //       await repository.bulkInsert(categories);
-  //     });
+      const arrange = [
+        {
+          search_params: new CategorySearchParams({
+            page: 1,
+            per_page: 2,
+            sort: 'name',
+            filter: 'TEST',
+          }),
+          search_result: new CategorySearchResult({
+            items: [categories[2], categories[4]],
+            total: 3,
+            current_page: 1,
+            per_page: 2,
+          }),
+        },
+        {
+          search_params: new CategorySearchParams({
+            page: 2,
+            per_page: 2,
+            sort: 'name',
+            filter: 'TEST',
+          }),
+          search_result: new CategorySearchResult({
+            items: [categories[0]],
+            total: 3,
+            current_page: 2,
+            per_page: 2,
+          }),
+        },
+      ];
 
-  //     test.each(arrange)(
-  //       'when value is $search_params',
-  //       async ({ search_params, search_result }) => {
-  //         const result = await repository.search(search_params);
-  //         expect(result.toJSON(true)).toMatchObject(search_result.toJSON(true));
-  //       },
-  //     );
-  //   });
-  // });
+      beforeEach(async () => {
+        await repository.bulkInsert(categories);
+      });
+
+      test.each(arrange)(
+        'when value is $search_params',
+        async ({ search_params, search_result }) => {
+          const result = await repository.search(search_params);
+          expect(result.toJSON(true)).toMatchObject(search_result.toJSON(true));
+        },
+      );
+    });
+  });
 });

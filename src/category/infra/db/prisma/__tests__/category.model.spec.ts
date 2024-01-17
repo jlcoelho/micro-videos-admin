@@ -5,7 +5,7 @@ import util from 'node:util';
 import { Category } from '../../../../domain/category.entity';
 
 const execSync = util.promisify(exec);
-
+jest.setTimeout(50000)
 
 const prismaBinary = './node_modules/.bin/prisma';
 
