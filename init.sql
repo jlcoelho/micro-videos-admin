@@ -1,0 +1,5 @@
+CREATE DATABASE micro_videos
+  WITH 
+  ENCODING = 'UTF8'
+  LC_COLLATE = 'C'
+  LC_CTYPE = 'C';

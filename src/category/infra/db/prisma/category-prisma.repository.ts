@@ -1,10 +1,10 @@
-import { Entity } from "../../../../shared/domain/entity";
 import { SearchParams } from "../../../../shared/domain/repository/search-params";
 import { Uuid } from "../../../../shared/domain/value-objects/uuid.vo";
 import { Category } from "../../../domain/category.entity";
 import { CategorySearchResult, ICategoryRepository } from "../../../domain/category.repository";
 import { prisma as PrismaClient } from "../../../../shared/infra/db/prisma/prisma";
 import { NotFoundEntityError } from "../../../../shared/domain/errors/not-found-entity.error";
+import { CategoryModelMapper } from "./category-model-mapper";
 
 export class CategoryPrismaRepository implements ICategoryRepository {
   sortableFields: string[] = ['name', 'created_at'];
@@ -12,27 +12,13 @@ export class CategoryPrismaRepository implements ICategoryRepository {
   constructor(private prisma: typeof PrismaClient) {}
 
   async insert(entity: Category): Promise<void> {
-    await this.prisma.category.create({
-      data: {
-        category_id: entity.category_id.id,
-        name: entity.name,
-        description: entity.description,
-        is_active: entity.is_active,
-        created_at: entity.created_at
-      }
-    })
+    const data = CategoryModelMapper.toModel(entity);
+    await this.prisma.category.create({ data });
   }
 
   async bulkInsert(entities: Category[]): Promise<void> {
-    await this.prisma.category.createMany({
-      data: entities.map(entity => ({
-        category_id: entity.category_id.id,
-        name: entity.name,
-        description: entity.description,
-        is_active: entity.is_active,
-        created_at: entity.created_at
-      })),
-    });
+    const models = entities.map(entity => CategoryModelMapper.toModel(entity));
+    await this.prisma.category.createMany({ data: models });
   }
 
   async update(entity: Category): Promise<void> {
@@ -43,14 +29,10 @@ export class CategoryPrismaRepository implements ICategoryRepository {
       throw new NotFoundEntityError(id, this.getEntity());
     }
 
+    const categoryModel = CategoryModelMapper.toModel(entity);
+
     await this.prisma.category.update({
-      data: {
-        category_id: entity.category_id.id,
-        name: entity.name,
-        description: entity.description,
-        is_active: entity.is_active,
-        created_at: entity.created_at
-      },
+      data: categoryModel,
       where: { category_id: id }
     });
   }
@@ -72,15 +54,7 @@ export class CategoryPrismaRepository implements ICategoryRepository {
   async findById(entity_id: Uuid): Promise<Category | null> {
     const model = await this._get(entity_id.id);
 
-    if (!model) return null;
-
-    return new Category({
-      category_id: new Uuid(model.category_id),
-      name: model.name,
-      description: model.description,
-      is_active: model.is_active,
-      created_at: model.created_at
-    });
+    return model ? CategoryModelMapper.toEntity(model) : null;
   }
 
   private async _get(id: string) {
@@ -89,16 +63,10 @@ export class CategoryPrismaRepository implements ICategoryRepository {
 
   async findAll(): Promise<Category[]> {
     const models = await this.prisma.category.findMany();
-    return models.map((model) => {
-      return new Category({
-        category_id: new Uuid(model.category_id),
-        name: model.name,
-        description: model.description,
-        is_active: model.is_active,
-        created_at: model.created_at
-      });
-    });
+
+    return models.map((model) => CategoryModelMapper.toEntity(model));
   }
+
   getEntity(): new (...args: any[]) => Category {
     return Category;
   }
@@ -106,32 +74,31 @@ export class CategoryPrismaRepository implements ICategoryRepository {
   async search(props: SearchParams<string>): Promise<CategorySearchResult> {
     const offset = (props.page - 1) * props.per_page;
     const limit = props.per_page;
-    
+
     const [count, models] = await this.prisma.$transaction([
-      this.prisma.category.count(),
-      this.prisma.category.findMany({
-        ...(props.filter && {
+      this.prisma.category.count({ 
+        ...(props.filter) && {
           where: {
-            name: { contains: props.filter }
-          }
-        }),
+            name: { contains: props.filter, mode: 'insensitive'}
+          },
+        },
+      }),
+      this.prisma.category.findMany({
+        ...(props.filter) && {
+          where: {
+            name: { contains: props.filter, mode: 'insensitive'}
+          },
+        },
         orderBy: props.sort && this.sortableFields.includes(props.sort)
-          ? { [props.sort]: props.sort_dir }
-          : { created_at: 'desc' },
+        ? {[props.sort]: props.sort_dir}
+        : {'created_at': 'desc'},
         skip: offset,
         take: limit
       })
-    ]);
+    ])
+
     return new CategorySearchResult({
-      items: models.map((model) => {
-        return new Category({
-          category_id: new Uuid(model.category_id),
-          name: model.name,
-          description: model.description,
-          is_active: model.is_active,
-          created_at: model.created_at
-        });
-      }),
+      items: models.map((model) => CategoryModelMapper.toEntity(model)),
       current_page: props.page,
       per_page: props.per_page,
       total: count
