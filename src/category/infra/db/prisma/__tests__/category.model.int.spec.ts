@@ -1,40 +1,15 @@
-import { PrismaClient } from '@prisma/client';
-import { generateDatabaseURL } from '../../../../../shared/infra/testing/prisma-integration.helpers';
-import { exec } from 'node:child_process';
-import util from 'node:util';
 import { Category } from '../../../../domain/category.entity';
+import { setupPrisma } from '../../../../../shared/infra/testing/helpers';
 
-const execSync = util.promisify(exec);
 jest.setTimeout(50000)
 
-const prismaBinary = './node_modules/.bin/prisma';
-
 describe("CategoryModel Integration Tests", () => {
-  let prisma: PrismaClient;
-  const { schemaId, url } = generateDatabaseURL();
-
-  beforeEach(async () => {
-    prisma = new PrismaClient({
-      datasources: { db: { url } }
-    });
-
-    await execSync(`${prismaBinary} db push`, {
-      env: {
-        ...process.env,
-        DATABASE_URL: url,
-      },
-    });
-    
-  });
-  afterEach(async () => {
-    await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaId}" CASCADE;`);
-    await prisma.$disconnect();
-  });
+  const prismaInstance  = setupPrisma();
 
   test("should create a category", async () => {
     const category = Category.fake().aCategory().build();
     
-    await prisma.category.create({
+    await prismaInstance.prisma.category.create({
       data: {
         category_id: category.category_id.id, 
         name: category.name,
@@ -46,8 +21,8 @@ describe("CategoryModel Integration Tests", () => {
   });
 
   test('mapping props', () => {
-    const attributesMap = prisma.category.fields;
-    const attributes = Object.keys(prisma.category.fields);
+    const attributesMap = prismaInstance.prisma.category.fields;
+    const attributes = Object.keys(prismaInstance.prisma.category.fields);
 
     expect(attributes).toStrictEqual([
       'category_id',
@@ -118,7 +93,7 @@ describe("CategoryModel Integration Tests", () => {
     };
 
     //act
-    const category = await prisma.category.create({ data: arrange });
+    const category = await prismaInstance.prisma.category.create({ data: arrange });
 
 
     //assert

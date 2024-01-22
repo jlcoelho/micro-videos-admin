@@ -1,55 +1,25 @@
-import { PrismaClient } from '@prisma/client';
-import { generateDatabaseURL } from '../../../../../shared/infra/testing/prisma-integration.helpers';
-import { exec } from 'node:child_process';
-import util from 'node:util';
 import { Category } from '../../../../domain/category.entity';
 import { CategoryPrismaRepository } from '../category-prisma.repository';
 import { Uuid } from '../../../../../shared/domain/value-objects/uuid.vo';
 import { NotFoundEntityError } from '../../../../../shared/domain/errors/not-found-entity.error';
 import { CategoryModelMapper } from '../category-model-mapper';
 import { CategorySearchParams, CategorySearchResult } from '../../../../domain/category.repository';
-
-const execSync = util.promisify(exec);
+import { setupPrisma } from '../../../../../shared/infra/testing/helpers';
 
 jest.setTimeout(50000);
 
-const prismaBinary = './node_modules/.bin/prisma';
 
 describe("CategoryPrismaRepository Integration Test", () => {
-  let prisma: PrismaClient;
   let repository: CategoryPrismaRepository;
-  const { schemaId, url } = generateDatabaseURL();
-
-  beforeAll(async () => {
-    prisma = new PrismaClient({
-      datasources: { db: { url } }
-    });
-
-
-  });
+  let prismaInstance = setupPrisma();
 
   beforeEach(async () => {
-    await execSync(`${prismaBinary} db push`, {
-      env: {
-        ...process.env,
-        DATABASE_URL: url,
-      },
-    });
-    repository = new CategoryPrismaRepository(prisma);
-  });
-  
-  afterEach(async () => {
-    await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaId}" CASCADE;`);
-    await prisma.$disconnect();
-  });
-
-  afterAll(async () => {
-    await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaId}" CASCADE;`);
-    await prisma.$disconnect();
+    repository = new CategoryPrismaRepository(prismaInstance.prisma);
   });
 
   test('should insert a new category', async () => {
     const category = Category.fake().aCategory().build();
+    
     await repository.insert(category);
     
     const categoryCreated = await repository.findById(category.category_id);
