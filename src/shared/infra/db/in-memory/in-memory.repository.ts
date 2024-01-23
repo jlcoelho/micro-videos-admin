@@ -1,5 +1,6 @@
 import { Entity } from "../../../domain/entity";
-import { NotFoundEntityError } from "../../../domain/errors/not-found-entity.error";
+import { NotFoundError } from "../../../domain/errors/not-found.error";
+
 import { IRepository, ISearchableRepository } from "../../../domain/repository/repository-interface";
 import { SearchParams, SortDirection } from "../../../domain/repository/search-params";
 import { SearchResult } from "../../../domain/repository/search-result";
@@ -23,7 +24,7 @@ export abstract class InMemoryRepository<E extends Entity, EntityId extends Valu
       item.entity_id.equals(entity.entity_id)
     );
     if (indexFound === -1) {
-      throw new NotFoundEntityError(entity.entity_id, this.getEntity());
+      throw new NotFoundError(entity.entity_id, this.getEntity());
     }
     this.items[indexFound] = entity;
   }
@@ -33,7 +34,7 @@ export abstract class InMemoryRepository<E extends Entity, EntityId extends Valu
       item.entity_id.equals(entity_id)
     );
     if (indexFound === -1) {
-      throw new NotFoundEntityError(entity_id, this.getEntity());
+      throw new NotFoundError(entity_id, this.getEntity());
     }
     this.items.splice(indexFound, 1);
   }

@@ -3,8 +3,9 @@ import { Uuid } from "../../../../shared/domain/value-objects/uuid.vo";
 import { Category } from "../../../domain/category.entity";
 import { CategorySearchResult, ICategoryRepository } from "../../../domain/category.repository";
 import { prisma as PrismaClient } from "../../../../shared/infra/db/prisma/prisma";
-import { NotFoundEntityError } from "../../../../shared/domain/errors/not-found-entity.error";
+
 import { CategoryModelMapper } from "./category-model-mapper";
+import { NotFoundError } from "../../../../shared/domain/errors/not-found.error";
 
 export class CategoryPrismaRepository implements ICategoryRepository {
   sortableFields: string[] = ['name', 'created_at'];
@@ -26,7 +27,7 @@ export class CategoryPrismaRepository implements ICategoryRepository {
     const model = await this._get(id);
     
     if (!model) {
-      throw new NotFoundEntityError(id, this.getEntity());
+      throw new NotFoundError(id, this.getEntity());
     }
 
     const categoryModel = CategoryModelMapper.toModel(entity);
@@ -41,7 +42,7 @@ export class CategoryPrismaRepository implements ICategoryRepository {
     const model = await this._get(id);
     
     if (!model) {
-      throw new NotFoundEntityError(id, this.getEntity());
+      throw new NotFoundError(id, this.getEntity());
     }
 
     await this.prisma.category.delete({

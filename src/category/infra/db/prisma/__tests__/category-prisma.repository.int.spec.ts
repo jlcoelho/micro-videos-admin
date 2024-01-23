@@ -1,7 +1,7 @@
 import { Category } from '../../../../domain/category.entity';
 import { CategoryPrismaRepository } from '../category-prisma.repository';
 import { Uuid } from '../../../../../shared/domain/value-objects/uuid.vo';
-import { NotFoundEntityError } from '../../../../../shared/domain/errors/not-found-entity.error';
+import { NotFoundError } from '../../../../../shared/domain/errors/not-found.error';
 import { CategoryModelMapper } from '../category-model-mapper';
 import { CategorySearchParams, CategorySearchResult } from '../../../../domain/category.repository';
 import { setupPrisma } from '../../../../../shared/infra/testing/helpers';
@@ -47,7 +47,7 @@ describe("CategoryPrismaRepository Integration Test", () => {
   it('should throw error on update when a entity not found', async () => {
     const entity = Category.fake().aCategory().build();
     await expect(repository.update(entity)).rejects.toThrow(
-      new NotFoundEntityError(entity.category_id.id, Category),
+      new NotFoundError(entity.category_id.id, Category),
     );
   });
 
@@ -65,7 +65,7 @@ describe("CategoryPrismaRepository Integration Test", () => {
   it('should throw error on delete when a entity not found', async () => {
     const categoryId = new Uuid();
     await expect(repository.delete(categoryId)).rejects.toThrow(
-      new NotFoundEntityError(categoryId.id, Category),
+      new NotFoundError(categoryId.id, Category),
     );
   });
 
