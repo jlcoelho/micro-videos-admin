@@ -1,9 +1,9 @@
 
-import { NotFoundError } from '../../../../shared/domain/errors/not-found.error';
-import { Uuid } from '../../../../shared/domain/value-objects/uuid.vo';
-import { setupPrisma } from '../../../../shared/infra/testing/helpers';
-import { Category } from '../../../domain/category.entity';
-import { CategoryPrismaRepository } from '../../../infra/db/prisma/category-prisma.repository';
+import { NotFoundError } from '../../../../../shared/domain/errors/not-found.error';
+import { Uuid } from '../../../../../shared/domain/value-objects/uuid.vo';
+import { setupPrisma } from '../../../../../shared/infra/testing/helpers';
+import { Category } from '../../../../domain/category.entity';
+import { CategoryPrismaRepository } from '../../../../infra/db/prisma/category-prisma.repository';
 import { DeleteCategoryUseCase } from '../../delete-category.use-case';
 
 jest.setTimeout(50000);
