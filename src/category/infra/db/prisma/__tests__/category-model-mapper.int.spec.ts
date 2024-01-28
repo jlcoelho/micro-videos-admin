@@ -22,13 +22,11 @@ describe('CategoryModelMapper Integration Tests', () => {
       );
     } catch (e) {
       expect(e).toBeInstanceOf(EntityValidationError);
-      expect((e as EntityValidationError).error).toMatchObject(
+      expect((e as EntityValidationError).error).toMatchObject([
         {
-            name: [
-                'name must be shorter than or equal to 255 characters'
-            ],
+          name: ['name must be shorter than or equal to 255 characters'],
         },
-      );
+      ]);
     }
   });
 
