@@ -3,7 +3,7 @@ import { setupPrisma } from '../../../../../shared/infra/testing/helpers';
 import { Category } from '../../../../domain/category.entity';
 import { CategoryPrismaRepository } from '../../../../infra/db/prisma/category-prisma.repository';
 import { CategoryOutputMapper } from '../../common/category-output';
-import { ListCategoriesUseCase } from '../../list-categories.use-case';
+import { ListCategoriesUseCase } from '../list-categories.use-case';
 
 jest.setTimeout(50000);
 

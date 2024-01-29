@@ -1,7 +1,7 @@
 import { Uuid } from "../../../../../shared/domain/value-objects/uuid.vo";
 import { setupPrisma } from "../../../../../shared/infra/testing/helpers";
 import { CategoryPrismaRepository } from "../../../../infra/db/prisma/category-prisma.repository";
-import { CreateCategoryUseCase } from "../../create-category.use-case";
+import { CreateCategoryUseCase } from "../create-category.use-case";
 
 jest.setTimeout(50000);
 

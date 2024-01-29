@@ -4,19 +4,17 @@ import { Uuid } from '../../../../../shared/domain/value-objects/uuid.vo';
 import { setupPrisma } from '../../../../../shared/infra/testing/helpers';
 import { Category } from '../../../../domain/category.entity';
 import { CategoryPrismaRepository } from '../../../../infra/db/prisma/category-prisma.repository';
-import { DeleteCategoryUseCase } from '../../delete-category.use-case';
+import { GetCategoryUseCase } from '../get-category.use-case';
 
-jest.setTimeout(50000);
-
-describe('DeleteCategoryUseCase Integration Tests', () => {
-  let useCase: DeleteCategoryUseCase;
+describe('GetCategoryUseCase Integration Tests', () => {
+  let useCase: GetCategoryUseCase;
   let repository: CategoryPrismaRepository;
 
   const prismaInstance = setupPrisma();
 
   beforeEach(() => {
     repository = new CategoryPrismaRepository(prismaInstance.prisma);
-    useCase = new DeleteCategoryUseCase(repository);
+    useCase = new GetCategoryUseCase(repository);
   });
 
   it('should throws error when entity not found', async () => {
@@ -26,12 +24,16 @@ describe('DeleteCategoryUseCase Integration Tests', () => {
     );
   });
 
-  it('should delete a category', async () => {
+  it('should returns a category', async () => {
     const category = Category.fake().aCategory().build();
     await repository.insert(category);
-    await useCase.execute({
+    const output = await useCase.execute({ id: category.category_id.id });
+    expect(output).toStrictEqual({
       id: category.category_id.id,
+      name: category.name,
+      description: category.description,
+      is_active: category.is_active,
+      created_at: category.created_at,
     });
-    await expect(repository.findById(category.category_id)).resolves.toBeNull();
   });
 });
